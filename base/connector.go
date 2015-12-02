@@ -3,7 +3,8 @@ package base
 import "github.com/urandom/graph"
 
 type Connector struct {
-	TargetNode graph.Node
+	targetNode      graph.Node
+	targetConnector graph.Connector
 
 	kind graph.ConnectorType
 	name string
@@ -14,15 +15,15 @@ var (
 	DefaultOutputConnector graph.Connector = NewOutputConnector()
 )
 
-func NewInputConnector(name ...string) Connector {
-	return newConnector(graph.Input, name...)
+func NewInputConnector(name ...string) *Connector {
+	return newConnector(graph.InputType, name...)
 }
 
-func NewOutputConnector(name ...string) Connector {
-	return newConnector(graph.Output, name...)
+func NewOutputConnector(name ...string) *Connector {
+	return newConnector(graph.OutputType, name...)
 }
 
-func newConnector(kind graph.ConnectorType, name ...string) Connector {
+func newConnector(kind graph.ConnectorType, name ...string) *Connector {
 	c := Connector{kind: kind}
 
 	if len(name) > 0 {
@@ -31,7 +32,7 @@ func newConnector(kind graph.ConnectorType, name ...string) Connector {
 		c.name = graph.InputName
 	}
 
-	return c
+	return &c
 }
 
 func (c Connector) Type() graph.ConnectorType {
@@ -42,6 +43,16 @@ func (c Connector) Name() string {
 	return c.name
 }
 
-func (c Connector) Target() graph.Node {
-	return c.TargetNode
+func (c Connector) Target() (graph.Node, graph.Connector) {
+	return c.targetNode, c.targetConnector
+}
+
+func (c *Connector) Connect(target graph.Node, connector graph.Connector) {
+	c.targetNode = target
+	c.targetConnector = connector
+}
+
+func (c *Connector) Disconnect() {
+	c.targetNode = nil
+	c.targetConnector = nil
 }
