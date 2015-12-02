@@ -10,17 +10,16 @@ type Connector struct {
 	name string
 }
 
-var (
-	DefaultInputConnector  graph.Connector = NewInputConnector()
-	DefaultOutputConnector graph.Connector = NewOutputConnector()
-)
-
 func NewInputConnector(name ...string) *Connector {
 	return newConnector(graph.InputType, name...)
 }
 
 func NewOutputConnector(name ...string) *Connector {
-	return newConnector(graph.OutputType, name...)
+	n := graph.OutputName
+	if len(name) > 0 {
+		n = name[0]
+	}
+	return newConnector(graph.OutputType, n)
 }
 
 func newConnector(kind graph.ConnectorType, name ...string) *Connector {

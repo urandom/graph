@@ -1,6 +1,6 @@
 package graph
 
-type Id int
+type Id uint64
 type ConnectorType int
 
 const (
@@ -29,14 +29,10 @@ type Connector interface {
 
 type Linker interface {
 	Node() Node
-	Connect(target Node, source, sink Connector)
+	Connect(target Linker, source, sink Connector)
 	Disconnect(source Connector)
-	Link(target Node)
+	Link(target Linker)
 	Unlink()
 	Connector(name string, kind ...ConnectorType) Connector
 	Connection(source ...Connector) (Node, Connector)
-}
-
-type Processor interface {
-	Process()
 }

@@ -8,21 +8,30 @@ type Linker struct {
 	OutputConnectors map[string]graph.Connector
 }
 
+const maxUint = ^uint64(0)
+
+var counter uint64 = 0
+
 func NewLinker() *Linker {
 	l := &Linker{
+		NodeId:           nextId(),
 		InputConnectors:  make(map[string]graph.Connector),
 		OutputConnectors: make(map[string]graph.Connector),
 	}
 
-	l.InputConnectors[DefaultInputConnector.Name()] = DefaultInputConnector
-	l.InputConnectors[DefaultOutputConnector.Name()] = DefaultOutputConnector
+	input := NewInputConnector()
+	output := NewOutputConnector()
+	l.InputConnectors[input.Name()] = input
+	l.OutputConnectors[output.Name()] = output
 
 	return l
 }
 
 func (l *Linker) Connect(target graph.Linker, source, sink graph.Connector) {
-	if l.Connector(source.Name(), source.Type()) == nil ||
-		target.Connector(sink.Name(), sink.Type()) == nil {
+	source = l.Connector(source.Name(), source.Type())
+	sink = target.Connector(sink.Name(), sink.Type())
+
+	if source == nil || sink == nil {
 		return
 	}
 
@@ -67,7 +76,7 @@ func (l Linker) Connector(name string, kind ...graph.ConnectorType) graph.Connec
 }
 
 func (l Linker) Connection(source ...graph.Connector) (graph.Node, graph.Connector) {
-	s := DefaultOutputConnector
+	s := l.InputConnectors[graph.InputName]
 	if len(source) > 0 {
 		s = source[0]
 	}
@@ -96,4 +105,16 @@ func (l Linker) Id() graph.Id {
 
 func (l Linker) Node() graph.Node {
 	return l
+}
+
+func nextId() graph.Id {
+	id := graph.Id(counter)
+
+	if counter == maxUint {
+		counter = 0
+	} else {
+		counter++
+	}
+
+	return id
 }
