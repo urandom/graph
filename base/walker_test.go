@@ -1,7 +1,9 @@
 package base
 
 import (
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/urandom/graph"
 )
@@ -21,20 +23,17 @@ func TestWalker(t *testing.T) {
 		t.Fatalf("Expected %v, got %v\n", expectedInt, len(w.roots))
 	}
 
-	if w.roots[0].Node().Id() != linkers[0].Node().Id() {
-		t.Fatalf("Root %#v doesnt match %#v\n", w.roots[0], linkers[0])
+	expected := map[graph.Id]graph.Linker{
+		linkers[0].Node().Id():  linkers[0],
+		linkers[5].Node().Id():  linkers[5],
+		linkers[6].Node().Id():  linkers[6],
+		linkers[10].Node().Id(): linkers[10],
 	}
 
-	if w.roots[1].Node().Id() != linkers[5].Node().Id() {
-		t.Fatalf("Root %#v doesnt match %#v\n", w.roots[1], linkers[5])
-	}
-
-	if w.roots[2].Node().Id() != linkers[6].Node().Id() {
-		t.Fatalf("Root %#v doesnt match %#v\n", w.roots[2], linkers[6])
-	}
-
-	if w.roots[3].Node().Id() != linkers[10].Node().Id() {
-		t.Fatalf("Root %#v doesnt match %#v\n", w.roots[3], linkers[10])
+	for _, l := range w.roots {
+		if _, ok := expected[l.Node().Id()]; !ok {
+			t.Fatalf("Unexpected root node: %v\n", l.Node())
+		}
 	}
 
 	walker := w.Walk()
@@ -56,7 +55,28 @@ func TestWalker(t *testing.T) {
 		if !v2.Add(n) {
 			t.Fatalf("Node %#v should be new\n", n)
 		}
+
+		switch n.Id() {
+		case linkers[2].Node().Id():
+			if !v2.Visited(linkers[1].Node()) {
+				t.Fatalf("Node 2 depends on 1")
+			}
+
+			if !v2.Visited(linkers[3].Node()) {
+				t.Fatalf("Node 2 depends on 3")
+			}
+		case linkers[9].Node().Id():
+			if !v2.Visited(linkers[7].Node()) {
+				t.Fatalf("Node 9 depends on 7")
+			}
+
+			if !v2.Visited(linkers[10].Node()) {
+				t.Fatalf("Node 9 depends on 10")
+			}
+		}
+
 		count++
+		time.Sleep(time.Duration((rand.Intn(200-10) + 10)) * time.Millisecond)
 
 		wd.Close()
 	}

@@ -13,12 +13,17 @@ type Walker struct {
 	count int
 }
 
+type edge struct {
+	from graph.Id
+	to   graph.Id
+}
+
 func NewWalker(start graph.Linker) Walker {
 	v := NewVisitor()
-	roots, count := findRoots(start, v)
+	roots, count, wgm := findRoots(start, v)
 
 	w := Walker{start: start, roots: roots,
-		count: count, wgm: make(map[graph.Id]*sync.WaitGroup)}
+		count: count, wgm: wgm}
 
 	return w
 }
@@ -41,7 +46,8 @@ func (w Walker) Total() int {
 	return w.count
 }
 
-func linkWalker(l graph.Linker,
+func linkWalker(
+	l graph.Linker,
 	connectors []graph.Connector,
 	nodes chan<- graph.WalkData,
 	counter chan<- struct{},
@@ -63,14 +69,6 @@ func linkWalker(l graph.Linker,
 
 	for _, out := range l.Connectors(graph.OutputType) {
 		if t, _ := out.Target(); t != nil {
-			if wg, ok := wgm[t.Node().Id()]; ok {
-				wg.Add(1)
-			} else {
-				wg := new(sync.WaitGroup)
-				wg.Add(1)
-				wgm[t.Node().Id()] = wg
-			}
-
 			go linkWalker(t, t.Connectors(), nodes, counter, wgm, v)
 		}
 	}
@@ -101,37 +99,60 @@ func closeNodes(nodes chan graph.WalkData, counter <-chan struct{}, total int) {
 	}
 }
 
-func findRoots(l graph.Linker, v Visitor) (roots []graph.Linker, count int) {
+func findRoots(l graph.Linker, v Visitor) (roots []graph.Linker, count int, wgm map[graph.Id]*sync.WaitGroup) {
+	wgm = make(map[graph.Id]*sync.WaitGroup)
 	roots = append(roots, l)
 	count++
 
 	v.Add(l.Node())
 
-	rr, rc := findBacktrackable(l, v)
+	wgv := map[edge]bool{}
+	rr, rc := findBacktrackable(l, v, wgm, wgv)
 	roots = append(roots, rr...)
 	count += rc
 
 	return
 }
 
-func findBacktrackable(l graph.Linker, v Visitor) (roots []graph.Linker, count int) {
+func findBacktrackable(
+	l graph.Linker,
+	v Visitor,
+	wgm map[graph.Id]*sync.WaitGroup,
+	wgv map[edge]bool,
+) (roots []graph.Linker, count int) {
 	for _, c := range l.Connectors(graph.OutputType) {
-		t, o := c.Target()
-
-		if t != nil {
+		if t, _ := c.Target(); t != nil {
 			if !v.Add(t.Node()) {
 				continue
 			}
 			count++
 
 			if len(t.Connectors()) > 1 {
-				rr, rc := findRootsBacktrack(t, v, o)
+				rr, rc := findRootsBacktrack(t, v, wgm, wgv)
 
 				roots = append(roots, rr...)
 				count += rc
+			} else {
+				var wg sync.WaitGroup
+				hasParents := false
+				for _, in := range t.Connectors() {
+					if tc, _ := in.Target(); tc != nil {
+						edge := edge{from: tc.Node().Id(), to: t.Node().Id()}
+						if !wgv[edge] {
+							wg.Add(1)
+							hasParents = true
+							wgv[edge] = true
+						}
+					}
+				}
+
+				if hasParents {
+					wgm[t.Node().Id()] = &wg
+				}
+
 			}
 
-			rr, rc := findBacktrackable(t, v)
+			rr, rc := findBacktrackable(t, v, wgm, wgv)
 			roots = append(roots, rr...)
 			count += rc
 		}
@@ -140,21 +161,30 @@ func findBacktrackable(l graph.Linker, v Visitor) (roots []graph.Linker, count i
 	return
 }
 
-func findRootsBacktrack(l graph.Linker, v Visitor, ignore ...graph.Connector) (roots []graph.Linker, count int) {
-	for _, c := range l.Connectors() {
-		if len(ignore) > 0 && c == ignore[0] {
-			continue
-		}
+func findRootsBacktrack(
+	l graph.Linker,
+	v Visitor,
+	wgm map[graph.Id]*sync.WaitGroup,
+	wgv map[edge]bool,
+) (roots []graph.Linker, count int) {
+	var wg sync.WaitGroup
+	var hasParents bool
 
-		t, _ := c.Target()
-		if t != nil {
+	for _, in := range l.Connectors() {
+		if t, _ := in.Target(); t != nil {
+			edge := edge{from: t.Node().Id(), to: l.Node().Id()}
+			if !wgv[edge] {
+				wg.Add(1)
+				hasParents = true
+				wgv[edge] = true
+			}
+
 			if !v.Add(t.Node()) {
 				continue
 			}
 
 			count++
-
-			rr, rc := findRootsBacktrack(t, v)
+			rr, rc := findRootsBacktrack(t, v, wgm, wgv)
 			roots = append(roots, rr...)
 			count += rc
 		}
@@ -162,6 +192,9 @@ func findRootsBacktrack(l graph.Linker, v Visitor, ignore ...graph.Connector) (r
 
 	if count == 0 {
 		roots = append(roots, l)
+	}
+	if hasParents {
+		wgm[l.Node().Id()] = &wg
 	}
 
 	return
