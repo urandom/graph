@@ -26,19 +26,49 @@ func TestWalker(t *testing.T) {
 	}
 
 	if w.roots[1].Node().Id() != linkers[5].Node().Id() {
-		t.Fatalf("Root %#v doesnt match %#v\n", w.roots[0], linkers[0])
+		t.Fatalf("Root %#v doesnt match %#v\n", w.roots[1], linkers[5])
 	}
 
 	if w.roots[2].Node().Id() != linkers[6].Node().Id() {
-		t.Fatalf("Root %#v doesnt match %#v\n", w.roots[0], linkers[0])
+		t.Fatalf("Root %#v doesnt match %#v\n", w.roots[2], linkers[6])
 	}
 
 	if w.roots[3].Node().Id() != linkers[10].Node().Id() {
-		t.Fatalf("Root %#v doesnt match %#v\n", w.roots[0], linkers[0])
+		t.Fatalf("Root %#v doesnt match %#v\n", w.roots[3], linkers[10])
+	}
+
+	walker := w.Walk()
+
+	v1 := NewVisitor()
+	v2 := NewVisitor()
+	for _, l := range linkers {
+		v1.Add(l.Node())
+	}
+
+	count := 0
+	for wd := range walker {
+		n := wd.Node
+
+		if !v1.Visited(n) {
+			t.Fatalf("Node %#v should be from the original set\n", n)
+		}
+
+		if !v2.Add(n) {
+			t.Fatalf("Node %#v should be new\n", n)
+		}
+		count++
+
+		wd.Close()
+	}
+
+	expectedInt = len(linkers)
+	if count != expectedInt {
+		t.Fatalf("Expected %v, got %v\n", expectedInt, count)
 	}
 }
 
 func setupGraph() []graph.Linker {
+	counter = 0
 	linkers := make([]graph.Linker, 12)
 
 	for i := range linkers {

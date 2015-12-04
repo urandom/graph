@@ -3,18 +3,15 @@ package base
 import "github.com/urandom/graph"
 
 type Linker struct {
-	NodeId           graph.Id
 	InputConnectors  map[string]graph.Connector
 	OutputConnectors map[string]graph.Connector
+
+	Data graph.Node
 }
-
-const maxUint = ^uint64(0)
-
-var counter uint64 = 0
 
 func NewLinker() *Linker {
 	l := &Linker{
-		NodeId:           nextId(),
+		Data:             NewNode(),
 		InputConnectors:  make(map[string]graph.Connector),
 		OutputConnectors: make(map[string]graph.Connector),
 	}
@@ -35,8 +32,8 @@ func (l *Linker) Connect(target graph.Linker, source, sink graph.Connector) {
 		return
 	}
 
-	source.Connect(target.Node(), sink)
-	sink.Connect(l.Node(), source)
+	source.Connect(target, sink)
+	sink.Connect(l, source)
 }
 
 func (l *Linker) Disconnect(source graph.Connector) {
@@ -75,7 +72,30 @@ func (l Linker) Connector(name string, kind ...graph.ConnectorType) graph.Connec
 	return nil
 }
 
-func (l Linker) Connection(source ...graph.Connector) (graph.Node, graph.Connector) {
+func (l Linker) Connectors(kind ...graph.ConnectorType) []graph.Connector {
+	t := graph.InputType
+	if len(kind) > 0 {
+		t = kind[0]
+	}
+
+	var connectorsOfType map[string]graph.Connector
+	connectors := []graph.Connector{}
+
+	switch t {
+	case graph.InputType:
+		connectorsOfType = l.InputConnectors
+	case graph.OutputType:
+		connectorsOfType = l.OutputConnectors
+	}
+
+	for _, v := range connectorsOfType {
+		connectors = append(connectors, v)
+	}
+
+	return connectors
+}
+
+func (l Linker) Connection(source ...graph.Connector) (graph.Linker, graph.Connector) {
 	s := l.InputConnectors[graph.InputName]
 	if len(source) > 0 {
 		s = source[0]
@@ -99,22 +119,6 @@ func (l Linker) Connection(source ...graph.Connector) (graph.Node, graph.Connect
 	return nil, nil
 }
 
-func (l Linker) Id() graph.Id {
-	return l.NodeId
-}
-
 func (l Linker) Node() graph.Node {
-	return l
-}
-
-func nextId() graph.Id {
-	id := graph.Id(counter)
-
-	if counter == maxUint {
-		counter = 0
-	} else {
-		counter++
-	}
-
-	return id
+	return l.Data
 }

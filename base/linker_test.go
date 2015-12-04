@@ -35,16 +35,16 @@ func TestLinker(t *testing.T) {
 	l1.Link(l2)
 
 	c = l1.Connector(graph.OutputName, graph.OutputType)
-	if n, o := c.Target(); n.Id() != l2.Node().Id() || o != l2.Connector(graph.InputName) {
+	if lt, o := c.Target(); lt.Node().Id() != l2.Node().Id() || o != l2.Connector(graph.InputName) {
 		t.Fatalf("Connector %v of %v should have %v as a target\n", c, l1, l2)
 	}
 
 	c = l2.Connector(graph.InputName)
-	if n, o := c.Target(); n.Id() != l1.Node().Id() || o != l1.Connector(graph.OutputName, graph.OutputType) {
+	if lt, o := c.Target(); lt.Node().Id() != l1.Node().Id() || o != l1.Connector(graph.OutputName, graph.OutputType) {
 		t.Fatalf("Connector %v of %v should have %v as a target\n", c, l2, l1)
 	}
 
-	if n, o := l2.Connection(); n.Id() != l1.Node().Id() || o != l1.Connector(graph.OutputName, graph.OutputType) {
+	if lt, o := l2.Connection(); lt.Node().Id() != l1.Node().Id() || o != l1.Connector(graph.OutputName, graph.OutputType) {
 		t.Fatalf("Connector %v of %v should have %v as a target\n", c, l2, l1)
 	}
 

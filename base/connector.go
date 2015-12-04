@@ -3,7 +3,7 @@ package base
 import "github.com/urandom/graph"
 
 type Connector struct {
-	targetNode      graph.Node
+	targetLinker    graph.Linker
 	targetConnector graph.Connector
 
 	kind graph.ConnectorType
@@ -42,16 +42,16 @@ func (c Connector) Name() string {
 	return c.name
 }
 
-func (c Connector) Target() (graph.Node, graph.Connector) {
-	return c.targetNode, c.targetConnector
+func (c Connector) Target() (graph.Linker, graph.Connector) {
+	return c.targetLinker, c.targetConnector
 }
 
-func (c *Connector) Connect(target graph.Node, connector graph.Connector) {
-	c.targetNode = target
+func (c *Connector) Connect(target graph.Linker, connector graph.Connector) {
+	c.targetLinker = target
 	c.targetConnector = connector
 }
 
 func (c *Connector) Disconnect() {
-	c.targetNode = nil
+	c.targetLinker = nil
 	c.targetConnector = nil
 }

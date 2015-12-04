@@ -22,8 +22,8 @@ type Graph interface {
 type Connector interface {
 	Type() ConnectorType
 	Name() string
-	Target() (Node, Connector)
-	Connect(target Node, connector Connector)
+	Target() (Linker, Connector)
+	Connect(target Linker, connector Connector)
 	Disconnect()
 }
 
@@ -34,5 +34,11 @@ type Linker interface {
 	Link(target Linker)
 	Unlink()
 	Connector(name string, kind ...ConnectorType) Connector
-	Connection(source ...Connector) (Node, Connector)
+	Connectors(kind ...ConnectorType) []Connector
+	Connection(source ...Connector) (Linker, Connector)
+}
+
+type Walker interface {
+	Walk() <-chan WalkData
+	Total() int
 }
