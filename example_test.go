@@ -89,6 +89,11 @@ func Example() {
 	}
 }
 
+/*
+	The produced graph:
+	0 - 2 - 3
+	1 - - /
+*/
 func CreateGraph() graph.Linker {
 	linkers := make([]graph.Linker, 4)
 
