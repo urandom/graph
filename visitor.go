@@ -1,21 +1,17 @@
-package base
+package graph
 
-import (
-	"sync"
-
-	"github.com/urandom/graph"
-)
+import "sync"
 
 type Visitor struct {
 	sync.RWMutex
-	visited map[graph.Id]bool
+	visited map[Id]bool
 }
 
 func NewVisitor() Visitor {
-	return Visitor{visited: make(map[graph.Id]bool)}
+	return Visitor{visited: make(map[Id]bool)}
 }
 
-func (v Visitor) Add(node graph.Node) bool {
+func (v Visitor) Add(node Node) bool {
 	defer v.Unlock()
 	v.Lock()
 
@@ -27,7 +23,7 @@ func (v Visitor) Add(node graph.Node) bool {
 	return true
 }
 
-func (v Visitor) Visited(node graph.Node) bool {
+func (v Visitor) Visited(node Node) bool {
 	defer v.RUnlock()
 	v.RLock()
 

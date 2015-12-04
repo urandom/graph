@@ -37,8 +37,3 @@ type Linker interface {
 	Connectors(kind ...ConnectorType) []Connector
 	Connection(source ...Connector) (Linker, Connector)
 }
-
-type Walker interface {
-	Walk() <-chan WalkData
-	Total() int
-}

@@ -1,12 +1,17 @@
-package base
+package graph_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/urandom/graph"
+	"github.com/urandom/graph/base"
+)
 
 func TestVisitor(t *testing.T) {
-	v := NewVisitor()
+	v := graph.NewVisitor()
 
-	l1 := NewLinker()
-	l2 := NewLinker()
+	l1 := base.NewLinker()
+	l2 := base.NewLinker()
 
 	if v.Visited(l1.Node()) {
 		t.Fatalf("L1 shouldn't have been visited yet")

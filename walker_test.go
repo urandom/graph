@@ -1,4 +1,4 @@
-package base
+package graph_test
 
 import (
 	"math/rand"
@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/urandom/graph"
+	"github.com/urandom/graph/base"
 )
 
 func TestWalker(t *testing.T) {
 	linkers := setupGraph()
 
-	w := NewWalker(linkers[0])
+	w := graph.NewWalker(linkers[0])
 
 	expectedInt := 12
 	if w.Total() != expectedInt {
@@ -19,8 +20,9 @@ func TestWalker(t *testing.T) {
 	}
 
 	expectedInt = 4
-	if len(w.roots) != expectedInt {
-		t.Fatalf("Expected %v, got %v\n", expectedInt, len(w.roots))
+	roots := w.RootNodes()
+	if len(roots) != expectedInt {
+		t.Fatalf("Expected %v, got %v\n", expectedInt, len(roots))
 	}
 
 	expected := map[graph.Id]graph.Linker{
@@ -30,16 +32,16 @@ func TestWalker(t *testing.T) {
 		linkers[10].Node().Id(): linkers[10],
 	}
 
-	for _, l := range w.roots {
-		if _, ok := expected[l.Node().Id()]; !ok {
-			t.Fatalf("Unexpected root node: %v\n", l.Node())
+	for _, n := range roots {
+		if _, ok := expected[n.Id()]; !ok {
+			t.Fatalf("Unexpected root node: %v\n", n)
 		}
 	}
 
 	walker := w.Walk()
 
-	v1 := NewVisitor()
-	v2 := NewVisitor()
+	v1 := graph.NewVisitor()
+	v2 := graph.NewVisitor()
 	for _, l := range linkers {
 		v1.Add(l.Node())
 	}
@@ -88,22 +90,21 @@ func TestWalker(t *testing.T) {
 }
 
 func setupGraph() []graph.Linker {
-	counter = 0
 	linkers := make([]graph.Linker, 12)
 
 	for i := range linkers {
-		l := NewLinker()
+		l := base.NewLinker()
 
 		switch i {
 		case 1:
 			l.Connect(linkers[i-1], l.Connector(graph.InputName), linkers[i-1].Connector(graph.OutputName, graph.OutputType))
 		case 2:
-			c := NewInputConnector("aux")
+			c := base.NewInputConnector("aux")
 			l.InputConnectors[c.Name()] = c
 
 			l.Connect(linkers[i-1], l.Connector(graph.InputName), linkers[i-1].Connector(graph.OutputName, graph.OutputType))
 		case 3:
-			c := NewInputConnector("aux")
+			c := base.NewInputConnector("aux")
 			l.InputConnectors[c.Name()] = c
 
 			l.Connect(linkers[i-1], l.Connector(graph.OutputName, graph.OutputType), linkers[i-1].Connector("aux", graph.InputType))
@@ -114,14 +115,14 @@ func setupGraph() []graph.Linker {
 		case 6:
 			l.Connect(linkers[3], l.Connector(graph.OutputName, graph.OutputType), linkers[3].Connector("aux"))
 		case 7:
-			c := NewOutputConnector("dup")
+			c := base.NewOutputConnector("dup")
 			l.OutputConnectors[c.Name()] = c
 
 			l.Connect(linkers[2], l.Connector(graph.InputName), linkers[2].Connector(graph.OutputName, graph.OutputType))
 		case 8:
 			l.Connect(linkers[i-1], l.Connector(graph.InputName), linkers[i-1].Connector(graph.OutputName, graph.OutputType))
 		case 9:
-			c := NewInputConnector("aux")
+			c := base.NewInputConnector("aux")
 			l.InputConnectors[c.Name()] = c
 
 			l.Connect(linkers[i-2], l.Connector("aux"), linkers[i-2].Connector("dup", graph.OutputType))

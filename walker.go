@@ -1,24 +1,20 @@
-package base
+package graph
 
-import (
-	"sync"
-
-	"github.com/urandom/graph"
-)
+import "sync"
 
 type Walker struct {
-	start graph.Linker
-	roots []graph.Linker
-	wgm   map[graph.Id]*sync.WaitGroup
+	start Linker
+	roots []Linker
+	wgm   map[Id]*sync.WaitGroup
 	count int
 }
 
 type edge struct {
-	from graph.Id
-	to   graph.Id
+	from Id
+	to   Id
 }
 
-func NewWalker(start graph.Linker) Walker {
+func NewWalker(start Linker) Walker {
 	v := NewVisitor()
 	roots, count, wgm := findRoots(start, v)
 
@@ -28,13 +24,13 @@ func NewWalker(start graph.Linker) Walker {
 	return w
 }
 
-func (w Walker) Walk() <-chan graph.WalkData {
-	nodes := make(chan graph.WalkData)
+func (w Walker) Walk() <-chan WalkData {
+	nodes := make(chan WalkData)
 	counter := make(chan struct{})
 	v := NewVisitor()
 
 	for _, r := range w.roots {
-		go linkWalker(r, []graph.Connector{}, nodes, counter, w.wgm, v)
+		go linkWalker(r, []Connector{}, nodes, counter, w.wgm, v)
 	}
 
 	go closeNodes(nodes, counter, w.Total())
@@ -46,12 +42,20 @@ func (w Walker) Total() int {
 	return w.count
 }
 
+func (w Walker) RootNodes() (roots []Node) {
+	roots = make([]Node, len(w.roots))
+	for i, l := range w.roots {
+		roots[i] = l.Node()
+	}
+	return
+}
+
 func linkWalker(
-	l graph.Linker,
-	connectors []graph.Connector,
-	nodes chan<- graph.WalkData,
+	l Linker,
+	connectors []Connector,
+	nodes chan<- WalkData,
 	counter chan<- struct{},
-	wgm map[graph.Id]*sync.WaitGroup,
+	wgm map[Id]*sync.WaitGroup,
 	v Visitor,
 ) {
 	if !v.Add(l.Node()) {
@@ -64,10 +68,10 @@ func linkWalker(
 
 	done := make(chan struct{})
 
-	nodes <- graph.NewWalkData(l.Node(), connectors, done)
+	nodes <- NewWalkData(l.Node(), connectors, done)
 	counter <- struct{}{}
 
-	for _, out := range l.Connectors(graph.OutputType) {
+	for _, out := range l.Connectors(OutputType) {
 		if t, _ := out.Target(); t != nil {
 			go linkWalker(t, t.Connectors(), nodes, counter, wgm, v)
 		}
@@ -76,7 +80,7 @@ func linkWalker(
 	go func() {
 		select {
 		case <-done:
-			for _, out := range l.Connectors(graph.OutputType) {
+			for _, out := range l.Connectors(OutputType) {
 				if tl, _ := out.Target(); tl != nil {
 					if wg, ok := wgm[tl.Node().Id()]; ok {
 						wg.Done()
@@ -87,7 +91,7 @@ func linkWalker(
 	}()
 }
 
-func closeNodes(nodes chan graph.WalkData, counter <-chan struct{}, total int) {
+func closeNodes(nodes chan WalkData, counter <-chan struct{}, total int) {
 	for {
 		select {
 		case <-counter:
@@ -99,8 +103,8 @@ func closeNodes(nodes chan graph.WalkData, counter <-chan struct{}, total int) {
 	}
 }
 
-func findRoots(l graph.Linker, v Visitor) (roots []graph.Linker, count int, wgm map[graph.Id]*sync.WaitGroup) {
-	wgm = make(map[graph.Id]*sync.WaitGroup)
+func findRoots(l Linker, v Visitor) (roots []Linker, count int, wgm map[Id]*sync.WaitGroup) {
+	wgm = make(map[Id]*sync.WaitGroup)
 	roots = append(roots, l)
 	count++
 
@@ -115,12 +119,12 @@ func findRoots(l graph.Linker, v Visitor) (roots []graph.Linker, count int, wgm 
 }
 
 func findBacktrackable(
-	l graph.Linker,
+	l Linker,
 	v Visitor,
-	wgm map[graph.Id]*sync.WaitGroup,
+	wgm map[Id]*sync.WaitGroup,
 	wgv map[edge]bool,
-) (roots []graph.Linker, count int) {
-	for _, c := range l.Connectors(graph.OutputType) {
+) (roots []Linker, count int) {
+	for _, c := range l.Connectors(OutputType) {
 		if t, _ := c.Target(); t != nil {
 			if !v.Add(t.Node()) {
 				continue
@@ -162,11 +166,11 @@ func findBacktrackable(
 }
 
 func findRootsBacktrack(
-	l graph.Linker,
+	l Linker,
 	v Visitor,
-	wgm map[graph.Id]*sync.WaitGroup,
+	wgm map[Id]*sync.WaitGroup,
 	wgv map[edge]bool,
-) (roots []graph.Linker, count int) {
+) (roots []Linker, count int) {
 	var wg sync.WaitGroup
 	var hasParents bool
 
