@@ -15,10 +15,6 @@ type Node interface {
 	Id() Id
 }
 
-type Graph interface {
-	Root() Node
-}
-
 type Connector interface {
 	Type() ConnectorType
 	Name() string
