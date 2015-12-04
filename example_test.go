@@ -78,6 +78,8 @@ func Example() {
 	for wd := range data {
 		if p, ok := wd.Node.(Processor); ok {
 			go p.Process(wd, output)
+		} else {
+			wd.Close()
 		}
 	}
 
