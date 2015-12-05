@@ -71,4 +71,8 @@ func TestConnector(t *testing.T) {
 	if n, o := c.Target(); n != nil || o != nil {
 		t.Fatalf("Unexpected target")
 	}
+
+	if err := c.Connect(l, NewOutputConnector("test")); err != graph.ErrSameConnectorType {
+		t.Fatalf("Expected %v, got %v\n", graph.ErrSameConnectorType, err)
+	}
 }

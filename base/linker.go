@@ -2,13 +2,19 @@ package base
 
 import "github.com/urandom/graph"
 
+// Linker provides a base implementation of graph.Linker
 type Linker struct {
-	InputConnectors  map[string]graph.Connector
+	// InputConnectors is a map of the input connectors using their names
+	InputConnectors map[string]graph.Connector
+	// OutputConnectors is a map of the output connectors using their names
 	OutputConnectors map[string]graph.Connector
 
+	// Data is the underlying Node
 	Data graph.Node
 }
 
+// NewLinker creates a new linker with a node and adds the default input and
+// output connectors
 func NewLinker() *Linker {
 	l := &Linker{
 		Data:             NewNode(),
@@ -24,16 +30,28 @@ func NewLinker() *Linker {
 	return l
 }
 
-func (l *Linker) Connect(target graph.Linker, source, sink graph.Connector) {
+func (l *Linker) Connect(target graph.Linker, source, sink graph.Connector) error {
+	if source == nil || sink == nil {
+		return graph.ErrInvalidConnector
+	}
+
 	source = l.Connector(source.Name(), source.Type())
 	sink = target.Connector(sink.Name(), sink.Type())
 
 	if source == nil || sink == nil {
-		return
+		return graph.ErrInvalidConnector
 	}
 
-	source.Connect(target, sink)
-	sink.Connect(l, source)
+	if err := source.Connect(target, sink); err != nil {
+		return err
+	}
+
+	if err := sink.Connect(l, source); err != nil {
+		source.Disconnect()
+		return err
+	}
+
+	return nil
 }
 
 func (l *Linker) Disconnect(source graph.Connector) {

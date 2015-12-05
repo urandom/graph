@@ -2,6 +2,7 @@ package graph
 
 import "sync"
 
+// Walker helps traverse a graph
 type Walker struct {
 	start Linker
 	roots []Linker
@@ -14,9 +15,14 @@ type edge struct {
 	to   Id
 }
 
+// NewWalker creates a new walker with a given linker as a starting point of
+// the traversal. If the starting point contains ancestors, they will not be
+// taken into account when counting and traversing the graph. It will
+// immediately find all other roots and count all nodes in the graph.
+//
+// A new walker has to be created if the structure of the graph changes
 func NewWalker(start Linker) Walker {
-	v := NewVisitor()
-	roots, count, wgm := findRoots(start, v)
+	roots, count, wgm := findRoots(start)
 
 	w := Walker{start: start, roots: roots,
 		count: count, wgm: wgm}
@@ -24,6 +30,9 @@ func NewWalker(start Linker) Walker {
 	return w
 }
 
+// Walk starts walking all roots simultaneously. It returns a channel of
+// WalkData, and each item of it has to be closed if the walker is to proceed
+// to the item's descendants.
 func (w Walker) Walk() <-chan WalkData {
 	nodes := make(chan WalkData)
 	counter := make(chan struct{})
@@ -38,10 +47,12 @@ func (w Walker) Walk() <-chan WalkData {
 	return nodes
 }
 
+// Total returns the total number of nodes in the graph
 func (w Walker) Total() int {
 	return w.count
 }
 
+// RootNodes returns all root nodes of the graph
 func (w Walker) RootNodes() (roots []Node) {
 	roots = make([]Node, len(w.roots))
 	for i, l := range w.roots {
@@ -103,7 +114,9 @@ func closeNodes(nodes chan WalkData, counter <-chan struct{}, total int) {
 	}
 }
 
-func findRoots(l Linker, v Visitor) (roots []Linker, count int, wgm map[Id]*sync.WaitGroup) {
+func findRoots(l Linker) (roots []Linker, count int, wgm map[Id]*sync.WaitGroup) {
+	v := NewVisitor()
+
 	wgm = make(map[Id]*sync.WaitGroup)
 	roots = append(roots, l)
 	count++
