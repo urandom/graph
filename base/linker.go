@@ -16,8 +16,12 @@ type Linker struct {
 // NewLinker creates a new linker with a node and adds the default input and
 // output connectors
 func NewLinker() *Linker {
+	return NewLinkerNode(NewNode())
+}
+
+func NewLinkerNode(node graph.Node) *Linker {
 	l := &Linker{
-		Data:             NewNode(),
+		Data:             node,
 		InputConnectors:  make(map[graph.ConnectorName]graph.Connector),
 		OutputConnectors: make(map[graph.ConnectorName]graph.Connector),
 	}
