@@ -80,7 +80,6 @@ func linkWalker(
 	done := make(chan struct{})
 
 	nodes <- NewWalkData(l.Node(), connectors, done)
-	counter <- struct{}{}
 
 	for _, out := range l.Connectors(OutputType) {
 		if t, _ := out.Target(); t != nil {
@@ -98,6 +97,7 @@ func linkWalker(
 					}
 				}
 			}
+			counter <- struct{}{}
 		}
 	}()
 }
