@@ -8,6 +8,7 @@ type Id uint64
 // ConnectorType is the type of connection a particular connector holds in
 // relation to its linker
 type ConnectorType int
+type ConnectorName string
 
 const (
 	// InputType represents the input type of a connector
@@ -16,9 +17,9 @@ const (
 	OutputType
 
 	// InputName is the name of the default input connector
-	InputName = "input"
+	InputName ConnectorName = "input"
 	// OutputName is the name of the default output connector
-	OutputName = "output"
+	OutputName ConnectorName = "output"
 )
 
 var (
@@ -53,7 +54,7 @@ type Linker interface {
 	Unlink()
 	// Connector returns the linker's connector of the given name and type. If
 	// no type is provided, it returns the input connector for the given name
-	Connector(name string, kind ...ConnectorType) Connector
+	Connector(name ConnectorName, kind ...ConnectorType) Connector
 	// Connectors returns all connnectors of a given type. If no type is
 	// provided, it returns the input connectors
 	Connectors(kind ...ConnectorType) []Connector
@@ -69,7 +70,7 @@ type Connector interface {
 	// Type returns the connector's type
 	Type() ConnectorType
 	// Name returns the connector's name
-	Name() string
+	Name() ConnectorName
 	// Target returns the linker and connector that are connected to this one
 	Target() (Linker, Connector)
 	// Connect connects the target linker and connector to this one. It only

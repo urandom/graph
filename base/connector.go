@@ -8,18 +8,18 @@ type Connector struct {
 	targetConnector graph.Connector
 
 	kind graph.ConnectorType
-	name string
+	name graph.ConnectorName
 }
 
 // NewInputConnector creates an input connector with the specified name. If no
 // name is given, the default input name is used.
-func NewInputConnector(name ...string) *Connector {
+func NewInputConnector(name ...graph.ConnectorName) *Connector {
 	return newConnector(graph.InputType, name...)
 }
 
 // NewOutputConnector creates an output connector with the specified name. If no
 // name is given, the default output name is used.
-func NewOutputConnector(name ...string) *Connector {
+func NewOutputConnector(name ...graph.ConnectorName) *Connector {
 	n := graph.OutputName
 	if len(name) > 0 {
 		n = name[0]
@@ -27,7 +27,7 @@ func NewOutputConnector(name ...string) *Connector {
 	return newConnector(graph.OutputType, n)
 }
 
-func newConnector(kind graph.ConnectorType, name ...string) *Connector {
+func newConnector(kind graph.ConnectorType, name ...graph.ConnectorName) *Connector {
 	c := Connector{kind: kind}
 
 	if len(name) > 0 {
@@ -47,7 +47,7 @@ func (c Connector) Type() graph.ConnectorType {
 	return c.kind
 }
 
-func (c Connector) Name() string {
+func (c Connector) Name() graph.ConnectorName {
 	return c.name
 }
 

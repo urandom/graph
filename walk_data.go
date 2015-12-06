@@ -14,9 +14,9 @@ type WalkData struct {
 // parent
 type Parent struct {
 	// From is the name of the parent's connector
-	From string
+	From ConnectorName
 	// To is the name of the connector of the current node's linker
-	To string
+	To ConnectorName
 	// Node is the parent
 	Node Node
 }

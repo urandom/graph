@@ -5,9 +5,9 @@ import "github.com/urandom/graph"
 // Linker provides a base implementation of graph.Linker
 type Linker struct {
 	// InputConnectors is a map of the input connectors using their names
-	InputConnectors map[string]graph.Connector
+	InputConnectors map[graph.ConnectorName]graph.Connector
 	// OutputConnectors is a map of the output connectors using their names
-	OutputConnectors map[string]graph.Connector
+	OutputConnectors map[graph.ConnectorName]graph.Connector
 
 	// Data is the underlying Node
 	Data graph.Node
@@ -18,8 +18,8 @@ type Linker struct {
 func NewLinker() *Linker {
 	l := &Linker{
 		Data:             NewNode(),
-		InputConnectors:  make(map[string]graph.Connector),
-		OutputConnectors: make(map[string]graph.Connector),
+		InputConnectors:  make(map[graph.ConnectorName]graph.Connector),
+		OutputConnectors: make(map[graph.ConnectorName]graph.Connector),
 	}
 
 	input := NewInputConnector()
@@ -74,7 +74,7 @@ func (l *Linker) Unlink() {
 	}
 }
 
-func (l Linker) Connector(name string, kind ...graph.ConnectorType) graph.Connector {
+func (l Linker) Connector(name graph.ConnectorName, kind ...graph.ConnectorType) graph.Connector {
 	t := graph.InputType
 	if len(kind) > 0 {
 		t = kind[0]
@@ -96,7 +96,7 @@ func (l Linker) Connectors(kind ...graph.ConnectorType) []graph.Connector {
 		t = kind[0]
 	}
 
-	var connectorsOfType map[string]graph.Connector
+	var connectorsOfType map[graph.ConnectorName]graph.Connector
 	connectors := []graph.Connector{}
 
 	switch t {
