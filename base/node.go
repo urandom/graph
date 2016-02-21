@@ -8,8 +8,9 @@ type Node struct {
 }
 
 const maxUint = ^uint64(0)
+const minAutoId = 10000
 
-var counter uint64 = 0
+var counter uint64 = minAutoId
 
 // NewNode creates a new node with an incremental id
 func NewNode() Node {
@@ -24,7 +25,7 @@ func nextId() graph.Id {
 	id := graph.Id(counter)
 
 	if counter == maxUint {
-		counter = 0
+		counter = minAutoId
 	} else {
 		counter++
 	}
