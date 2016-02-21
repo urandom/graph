@@ -8,7 +8,7 @@ type Node struct {
 }
 
 const maxUint = ^uint64(0)
-const minAutoId = 10000
+const minAutoId = uint64(^uint16(0))
 
 var counter uint64 = minAutoId
 
