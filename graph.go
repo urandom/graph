@@ -17,9 +17,9 @@ const (
 	OutputType
 
 	// InputName is the name of the default input connector
-	InputName ConnectorName = "input"
+	InputName ConnectorName = "Input"
 	// OutputName is the name of the default output connector
-	OutputName ConnectorName = "output"
+	OutputName ConnectorName = "Output"
 )
 
 var (

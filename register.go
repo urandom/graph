@@ -73,14 +73,14 @@ A list of json objects. Each line represents a root
 		"Path": "{{ index .Args 0 }}"
 	},
 	"Outputs": {
-		"output": {
+		"Output": {
 			"Name": "Convolution",
 			"Options": {
 				"Kernel": [-1, -1, -1, -1, 8, -1, -1, -1, -1],
 				"Noralize": true
 			},
 			"Outputs": {
-				"output": {
+				"Output": {
 					"Name": "Save",
 					"Options": {
 						"Path": {{ if gt (len .Args) 1 }} "{{ index .Args 1 }}" {{ else }} "/tmp/out.png" {{ end }}
@@ -178,19 +178,15 @@ func processLinkerTree(p Linker, rj jsonLinker, references map[uint16]Linker, de
 		c, ref := jsonToLinker(cj, references)
 
 		inputName := InputName
-		if cj.Input != "" && cj.Input != "Input" {
+		if cj.Input != "" {
 			inputName = cj.Input
-		}
-
-		if name == "Output" {
-			name = "output"
 		}
 
 		if c != nil {
 			if ops, ok := deferred[cj.ReferenceId]; ok {
 				for _, op := range ops {
 					opInputName := InputName
-					if op.inputName != "" && op.inputName != "Input" {
+					if op.inputName != "" {
 						opInputName = op.inputName
 					}
 

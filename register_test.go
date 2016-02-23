@@ -59,17 +59,22 @@ func TestProcessJSON(t *testing.T) {
 	}
 
 	connectors := roots[0].Connectors(graph.OutputType)
-	if len(connectors) != 1 {
-		t.Fatalf("Expected 1 connector, got %d", len(connectors))
+	if len(connectors) != 2 {
+		t.Fatalf("Expected 2 connectors, got %d", len(connectors))
 	}
 
-	if connectors[0].Name() != graph.OutputName {
-		t.Fatalf("Expected %s, got %s\n", graph.OutputName, connectors[0].Name())
-	}
+	for _, c := range connectors {
+		switch c.Name() {
+		case graph.OutputName:
+			target, _ := c.Target()
+			if _, ok := target.Node().(saveNode); !ok {
+				t.Fatalf("Unknown node type %T", target)
+			}
+		case "ref":
+		default:
+			t.Fatalf("Only %s and %s are expected\n", graph.OutputName, "ref")
+		}
 
-	target, _ := connectors[0].Target()
-	if _, ok := target.Node().(saveNode); !ok {
-		t.Fatalf("Unknown node type %T", target)
 	}
 }
 
@@ -88,39 +93,92 @@ func TestProcessJSONTwoRoots(t *testing.T) {
 	}
 
 	connectors := roots[0].Connectors(graph.OutputType)
-	if len(connectors) != 1 {
-		t.Fatalf("Expected 1 connector, got %d", len(connectors))
+	if len(connectors) != 2 {
+		t.Fatalf("Expected 2 connectors, got %d", len(connectors))
 	}
 
-	if connectors[0].Name() != graph.OutputName {
-		t.Fatalf("Expected %s, got %s\n", graph.OutputName, connectors[0].Name())
+	for _, c := range connectors {
+		switch c.Name() {
+		case graph.OutputName:
+			target, ic := c.Target()
+			if _, ok := target.Node().(saveNode); !ok {
+				t.Fatalf("Unknown node type %T", target)
+			}
+
+			if ic.Name() != graph.InputName {
+				t.Fatalf("Expected %s, got %s\n", graph.InputName, ic.Name())
+			}
+
+			c2 := roots[1].Connector(graph.OutputName, graph.OutputType)
+			if c2 == nil {
+				t.Fatalf("Expected a default output connector")
+			}
+
+			target, ic = c2.Target()
+			if _, ok := target.Node().(saveNode); !ok {
+				t.Fatalf("Unknown node type %T", target)
+			}
+
+			if ic.Name() != "dup" {
+				t.Fatalf("Expected %s, got %s\n", "dup", ic.Name())
+			}
+		case "ref":
+		default:
+			t.Fatalf("Only %s and %s are expected\n", graph.OutputName, "ref")
+		}
+
 	}
 
-	target, c := connectors[0].Target()
-	if _, ok := target.Node().(saveNode); !ok {
-		t.Fatalf("Unknown node type %T", target)
+}
+
+func TestProcessJSONBranch(t *testing.T) {
+	roots, err := graph.ProcessJSON(testBranch, nil)
+	if err != nil {
+		t.Fatalf("processing testBranch: %v", err)
 	}
 
-	if c.Name() != graph.InputName {
-		t.Fatalf("Expected %s, got %s\n", graph.InputName, c.Name())
+	connectors := roots[0].Connectors(graph.OutputType)
+	if len(connectors) != 2 {
+		t.Fatalf("Expected 2 connectors, got %d", len(connectors))
 	}
 
-	connectors = roots[1].Connectors(graph.OutputType)
-	if len(connectors) != 1 {
-		t.Fatalf("Expected 1 connector, got %d", len(connectors))
-	}
+	for _, c := range connectors {
+		switch c.Name() {
+		case graph.OutputName:
+			target, ic := c.Target()
+			if _, ok := target.Node().(saveNode); !ok {
+				t.Fatalf("Unknown node type %T", target)
+			}
 
-	if connectors[0].Name() != graph.OutputName {
-		t.Fatalf("Expected %s, got %s\n", graph.OutputName, connectors[0].Name())
-	}
+			if ic.Name() != graph.InputName {
+				t.Fatalf("Expected %s, got %s\n", graph.InputName, ic.Name())
+			}
+		case "ref":
+			target, ic := c.Target()
+			if _, ok := target.Node().(passNode); !ok {
+				t.Fatalf("Unknown node type %T", target)
+			}
 
-	target, c = connectors[0].Target()
-	if _, ok := target.Node().(saveNode); !ok {
-		t.Fatalf("Unknown node type %T", target)
-	}
+			if ic.Name() != graph.InputName {
+				t.Fatalf("Expected %s, got %s\n", graph.InputName, ic.Name())
+			}
 
-	if c.Name() != "dup" {
-		t.Fatalf("Expected %s, got %s\n", "dup", c.Name())
+			tc := target.Connector(graph.OutputName, graph.OutputType)
+			if tc == nil {
+				t.Fatalf("Expected default output connector\n")
+			}
+
+			st, sc := tc.Target()
+			if _, ok := st.Node().(saveNode); !ok {
+				t.Fatalf("Unknown node type %T", st)
+			}
+
+			if sc.Name() != "dup" {
+				t.Fatalf("Expected %s, got %s\n", "dup", sc.Name())
+			}
+		default:
+			t.Fatalf("Only %s and %s are expected\n", graph.OutputName, "ref")
+		}
 	}
 }
 
@@ -140,6 +198,10 @@ type saveOptions struct {
 	Path string
 }
 
+type passNode struct {
+	graph.Node
+}
+
 func init() {
 	graph.RegisterLinker("Load", func(opts json.RawMessage) (graph.Linker, error) {
 		var o loadOptions
@@ -148,10 +210,15 @@ func init() {
 			return nil, fmt.Errorf("constructing Load: %v", err)
 		}
 
-		return base.NewLinkerNode(loadNode{
+		l := base.NewLinkerNode(loadNode{
 			Node: base.NewNode(),
 			opts: o,
-		}), nil
+		})
+
+		ref := base.NewOutputConnector("ref")
+		l.OutputConnectors[ref.Name()] = ref
+
+		return l, nil
 	})
 	graph.RegisterLinker("Save", func(opts json.RawMessage) (graph.Linker, error) {
 		var o saveOptions
@@ -170,6 +237,12 @@ func init() {
 
 		return l, nil
 	})
+
+	graph.RegisterLinker("Pass", func(opts json.RawMessage) (graph.Linker, error) {
+		return base.NewLinkerNode(passNode{
+			Node: base.NewNode(),
+		}), nil
+	})
 }
 
 const (
@@ -180,7 +253,7 @@ const (
 		"Path": "1"
 	},
 	"Outputs": {
-		"output": {
+		"Output": {
 			"Name": "Save",
 			"Options": {
 				"Path": "2"
@@ -196,7 +269,7 @@ const (
 		"Path": "1"
 	},
 	"Outputs": {
-		"output": {
+		"Output": {
 			"Name": "Save",
 			"ReferenceId": 1,
 			"Options": {
@@ -211,11 +284,37 @@ const (
 		"Path": "2"
 	},
 	"Outputs": {
-		"output": {
+		"Output": {
 			"ReferenceTo": 1,
 			"Input": "dup"
 		}
 	}
 }
 `
+	testBranch = `
+{
+	"Name": "Load",
+	"Options": {
+		"Path": "1"
+	},
+	"Outputs": {
+		"ref": {
+			"Name": "Pass",
+			"Outputs": {
+				"Output": {
+					"ReferenceTo": 1,
+					"Input": "dup"
+				}
+			}
+		},
+		"Output": {
+			"Name": "Save",
+			"ReferenceId": 1,
+			"Options": {
+				"Path": "2"
+			}
+		}
+	}
+}
+	`
 )
