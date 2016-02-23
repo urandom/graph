@@ -54,8 +54,12 @@ func TestProcessJSON(t *testing.T) {
 		t.Fatalf("Expected 1 root, got %d", len(roots))
 	}
 
-	if _, ok := roots[0].Node().(loadNode); !ok {
+	if n, ok := roots[0].Node().(loadNode); !ok {
 		t.Fatalf("Unknown node type %T", roots[0].Node())
+	} else {
+		if n.opts.Path != "1" {
+			t.Fatalf("Expected %s, got %s\n", "1", n.opts.Path)
+		}
 	}
 
 	connectors := roots[0].Connectors(graph.OutputType)
@@ -67,8 +71,12 @@ func TestProcessJSON(t *testing.T) {
 		switch c.Name() {
 		case graph.OutputName:
 			target, _ := c.Target()
-			if _, ok := target.Node().(saveNode); !ok {
+			if n, ok := target.Node().(saveNode); !ok {
 				t.Fatalf("Unknown node type %T", target)
+			} else {
+				if n.opts.Path != "2" {
+					t.Fatalf("Expected %s, got %s\n", "2", n.opts.Path)
+				}
 			}
 		case "ref":
 		default:
