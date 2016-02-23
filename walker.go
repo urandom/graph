@@ -67,7 +67,7 @@ func linkWalker(
 	nodes chan<- WalkData,
 	counter chan<- struct{},
 	wgm map[Id]*sync.WaitGroup,
-	v Visitor,
+	v *Visitor,
 ) {
 	if !v.Add(l.Node()) {
 		return
@@ -133,7 +133,7 @@ func findRoots(l Linker) (roots []Linker, count int, wgm map[Id]*sync.WaitGroup)
 
 func findBacktrackable(
 	l Linker,
-	v Visitor,
+	v *Visitor,
 	wgm map[Id]*sync.WaitGroup,
 	wgv map[edge]bool,
 ) (roots []Linker, count int) {
@@ -180,7 +180,7 @@ func findBacktrackable(
 
 func findRootsBacktrack(
 	l Linker,
-	v Visitor,
+	v *Visitor,
 	wgm map[Id]*sync.WaitGroup,
 	wgv map[edge]bool,
 ) (roots []Linker, count int) {

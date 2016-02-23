@@ -73,14 +73,14 @@ A list of json objects. Each line represents a root
 		"Path": "{{ index .Args 0 }}"
 	},
 	"Outputs": {
-		"Output": {
+		"output": {
 			"Name": "Convolution",
 			"Options": {
 				"Kernel": [-1, -1, -1, -1, 8, -1, -1, -1, -1],
 				"Noralize": true
 			},
 			"Outputs": {
-				"Output": {
+				"output": {
 					"Name": "Save",
 					"Options": {
 						"Path": {{ if gt (len .Args) 1 }} "{{ index .Args 1 }}" {{ else }} "/tmp/out.png" {{ end }}
@@ -148,7 +148,7 @@ func ProcessJSON(input interface{}, templateData *JSONTemplateData) (roots []Lin
 	}
 
 	var references = make(map[uint16]Linker)
-	var deferred = make(map[uint16]deferredLinker)
+	var deferred = make(map[uint16][]deferredLinker)
 
 	for {
 		var root jsonLinker
@@ -173,23 +173,37 @@ func ProcessJSON(input interface{}, templateData *JSONTemplateData) (roots []Lin
 	return
 }
 
-func processLinkerTree(p Linker, rj jsonLinker, references map[uint16]Linker, deferred map[uint16]deferredLinker) {
+func processLinkerTree(p Linker, rj jsonLinker, references map[uint16]Linker, deferred map[uint16][]deferredLinker) {
 	for name, cj := range rj.Outputs {
 		c, ref := jsonToLinker(cj, references)
+
 		inputName := InputName
-		if cj.Input != "" {
+		if cj.Input != "" && cj.Input != "Input" {
 			inputName = cj.Input
 		}
 
+		if name == "Output" {
+			name = "output"
+		}
+
 		if c != nil {
-			if op, ok := deferred[cj.ReferenceId]; ok {
-				op.linker.Connect(c, op.linker.Connector(op.outputName, OutputType), c.Connector(op.inputName, InputType))
+			if ops, ok := deferred[cj.ReferenceId]; ok {
+				for _, op := range ops {
+					opInputName := InputName
+					if op.inputName != "" && op.inputName != "Input" {
+						opInputName = op.inputName
+					}
+
+					op.linker.Connect(c, op.linker.Connector(op.outputName, OutputType), c.Connector(opInputName, InputType))
+				}
+
+				delete(deferred, cj.ReferenceId)
 			}
 			p.Connect(c, p.Connector(name, OutputType), c.Connector(inputName, InputType))
 
 			processLinkerTree(c, cj, references, deferred)
 		} else if ref > 0 {
-			deferred[ref] = deferredLinker{linker: p, outputName: name, inputName: inputName}
+			deferred[ref] = append(deferred[ref], deferredLinker{linker: p, outputName: name, inputName: inputName})
 		} else {
 			panic(convertError{linker: cj, err: errors.New("no child linker or reference id")})
 		}

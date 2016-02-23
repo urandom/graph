@@ -9,13 +9,13 @@ type Visitor struct {
 }
 
 // NewVisitor creates a new visitor
-func NewVisitor() Visitor {
-	return Visitor{visited: make(map[Id]bool)}
+func NewVisitor() *Visitor {
+	return &Visitor{visited: make(map[Id]bool)}
 }
 
 // Add marks a node as visited. If the node has already been visited, it will
 // return false. A write lock is used during this operation
-func (v Visitor) Add(node Node) bool {
+func (v *Visitor) Add(node Node) bool {
 	defer v.Unlock()
 	v.Lock()
 
@@ -29,7 +29,7 @@ func (v Visitor) Add(node Node) bool {
 
 // Visited returns whether a node has already been visited. A read lock is used
 // when checking
-func (v Visitor) Visited(node Node) bool {
+func (v *Visitor) Visited(node Node) bool {
 	defer v.RUnlock()
 	v.RLock()
 
