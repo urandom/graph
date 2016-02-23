@@ -12,7 +12,12 @@ import (
 	"text/template"
 )
 
+// A LinkerJSONConstructor creates a Linker by using the options defined by the
+// raw json message
 type LinkerJSONConstructor func(opts json.RawMessage) (Linker, error)
+
+// The JSONTemplateData is the payload used by ProcessJSON when dealing with
+// text/template data
 type JSONTemplateData struct {
 	Args []string
 }
@@ -22,6 +27,8 @@ var (
 	operations   = make(map[string]LinkerJSONConstructor)
 )
 
+// RegisterLinker allows the creation of Linkers by the given name. If it is
+// called twice by the same name, or if the constructor is nil, it panics
 func RegisterLinker(name string, constructor LinkerJSONConstructor) {
 	operationsMu.Lock()
 	defer operationsMu.Unlock()
@@ -64,34 +71,49 @@ type deferredLinker struct {
 	inputName  ConnectorName
 }
 
-/*
-A list of json objects. Each line represents a root
-
-{
-	"Name": "Load",
-	"Options": {
-		"Path": "{{ index .Args 0 }}"
-	},
-	"Outputs": {
-		"Output": {
-			"Name": "Convolution",
-			"Options": {
-				"Kernel": [-1, -1, -1, -1, 8, -1, -1, -1, -1],
-				"Noralize": true
-			},
-			"Outputs": {
-				"Output": {
-					"Name": "Save",
-					"Options": {
-						"Path": {{ if gt (len .Args) 1 }} "{{ index .Args 1 }}" {{ else }} "/tmp/out.png" {{ end }}
-					}
-				}
-			}
-		}
-	}
-}
-*/
-
+// ProcessJSON converts the input into a graph and returns the root linkers, or
+// an error. The input may be a string, byte array, io.Reader, or
+// *json.Decoder. Any other type will cause a panic. If the input is not a json
+// decoder, and JSONTemplateData is not nil, the input is parsed using
+// text/template. JSONTemplateData serves as the payload when parsing.
+//
+// The input is a list (not a json array) or one or more graph roots. A linker
+// is represented using a json object. The "Name" property holds the name of a
+// registered Linker type, and the "Options" value is passed to the constructor
+// function. It contains an object of "Outputs", each key being an output
+// connector name, and the value being the connected Linker. A json linker may
+// contain a "ReferenceId", which may be used by another linker to link to it
+// (useful when representing a separate branch). In such a case, the parent
+// linker in the separate branch will have a linker is defined by
+// "ReferenceTo", as oppsosed to a "Name" and "Options". The "ReferenceTo"
+// value corresponds to the "ReferenceId" value of the joining linker. Finally,
+// a json linker may contain an "Input" property, which designes the input
+// connector its parent is connected to. It may be omitted when the default is
+// used.
+//
+// {
+// 	"Name": "Load",
+// 	"Options": {
+// 		"Path": "{{ index .Args 0 }}"
+// 	},
+// 	"Outputs": {
+// 		"Output": {
+// 			"Name": "Convolution",
+// 			"Options": {
+// 				"Kernel": [-1, -1, -1, -1, 8, -1, -1, -1, -1],
+// 				"Noralize": true
+// 			},
+// 			"Outputs": {
+// 				"Output": {
+// 					"Name": "Save",
+// 					"Options": {
+// 						"Path": {{ if gt (len .Args) 1 }} "{{ index .Args 1 }}" {{ else }} "/tmp/out.png" {{ end }}
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 func ProcessJSON(input interface{}, templateData *JSONTemplateData) (roots []Linker, err error) {
 	defer func() {
 		if r := recover(); r != nil {
