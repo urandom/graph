@@ -121,6 +121,8 @@ func ProcessJSON(input interface{}, templateData *JSONTemplateData) (roots []Lin
 		jsonInput = string(b)
 	case *json.Decoder:
 		dec = t
+	default:
+		panic(fmt.Sprintf("Unkown type: %T", input))
 	}
 
 	if dec == nil {

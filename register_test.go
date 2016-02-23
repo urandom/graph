@@ -190,6 +190,34 @@ func TestProcessJSONBranch(t *testing.T) {
 	}
 }
 
+func TestProcessJSONTemplate(t *testing.T) {
+	roots, err := graph.ProcessJSON(testTemplate, &graph.JSONTemplateData{})
+	if err != nil {
+		t.Fatalf("processing testTemplate: %v", err)
+	}
+
+	if n, ok := roots[0].Node().(loadNode); !ok {
+		t.Fatalf("Unknown node type %T", roots[0].Node())
+	} else {
+		if n.opts.Path != "/tmp/out.png" {
+			t.Fatalf("Expected %s, got %s\n", "/tmp/out.png", n.opts.Path)
+		}
+	}
+
+	roots, err = graph.ProcessJSON(testTemplate, &graph.JSONTemplateData{Args: []string{"beta"}})
+	if err != nil {
+		t.Fatalf("processing testTemplate: %v", err)
+	}
+
+	if n, ok := roots[0].Node().(loadNode); !ok {
+		t.Fatalf("Unknown node type %T", roots[0].Node())
+	} else {
+		if n.opts.Path != "beta" {
+			t.Fatalf("Expected %s, got %s\n", "beta", n.opts.Path)
+		}
+	}
+}
+
 type loadNode struct {
 	graph.Node
 	opts loadOptions
@@ -322,6 +350,14 @@ const (
 				"Path": "2"
 			}
 		}
+	}
+}
+	`
+	testTemplate = `
+{
+	"Name": "Load",
+	"Options": {
+		"Path": {{ if gt (len .Args) 0 }} "{{ index .Args 0 }}" {{ else }} "/tmp/out.png" {{ end }}
 	}
 }
 	`
