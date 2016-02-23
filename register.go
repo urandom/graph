@@ -1,14 +1,21 @@
 package graph
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"strings"
 	"sync"
+	"text/template"
 )
 
 type LinkerJSONConstructor func(opts json.RawMessage) (Linker, error)
+type JSONTemplateData struct {
+	Args []string
+}
 
 var (
 	operationsMu sync.Mutex
@@ -61,21 +68,21 @@ type deferredLinker struct {
 A list of json objects. Each line represents a root
 
 {
-	"name": "Load",
-	"options": {
+	"Name": "Load",
+	"Options": {
 		"Path": "{{ index .Args 0 }}"
 	},
-	"outputs": {
-		"output": {
-			"name": "Convolution",
-			"options": {
+	"Outputs": {
+		"Output": {
+			"Name": "Convolution",
+			"Options": {
 				"Kernel": [-1, -1, -1, -1, 8, -1, -1, -1, -1],
 				"Noralize": true
 			},
-			"outputs": {
-				"output": {
-					"name": "Save",
-					"options": {
+			"Outputs": {
+				"Output": {
+					"Name": "Save",
+					"Options": {
 						"Path": {{ if gt (len .Args) 1 }} "{{ index .Args 1 }}" {{ else }} "/tmp/out.png" {{ end }}
 					}
 				}
@@ -85,24 +92,73 @@ A list of json objects. Each line represents a root
 }
 */
 
-func ProcessJSON(dec *json.Decoder) (roots []Linker, err error) {
+func ProcessJSON(input interface{}, templateData *JSONTemplateData) (roots []Linker, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if ce, ok := r.(convertError); ok {
 				roots = []Linker{}
-				err = fmt.Errorf("processing json linker data: %v", ce.err)
+				err = fmt.Errorf("processing json linker data for node '%#v': %v", ce.linker, ce.err)
 			} else {
 				panic(r)
 			}
 		}
 	}()
 
+	var jsonInput string
+	var dec *json.Decoder
+
+	switch t := input.(type) {
+	case string:
+		jsonInput = t
+	case []byte:
+		jsonInput = string(t)
+	case io.Reader:
+		var b []byte
+		if b, err = ioutil.ReadAll(t); err != nil {
+			err = fmt.Errorf("reading json from reader: %v", err)
+			return
+		}
+		jsonInput = string(b)
+	case *json.Decoder:
+		dec = t
+	}
+
+	if dec == nil {
+		var r io.Reader
+
+		if templateData == nil {
+			r = strings.NewReader(jsonInput)
+		} else {
+			var t *template.Template
+
+			if t, err = template.New("json").Parse(jsonInput); err != nil {
+				err = fmt.Errorf("parsing template: %v", err)
+				return
+			}
+
+			var b bytes.Buffer
+			if err = t.Execute(&b, templateData); err != nil {
+				err = fmt.Errorf("executing template: %v", err)
+				return
+			}
+
+			r = &b
+		}
+		dec = json.NewDecoder(r)
+	}
+
 	var references = make(map[uint16]Linker)
 	var deferred = make(map[uint16]deferredLinker)
+
 	for {
 		var root jsonLinker
-		if err = dec.Decode(&root); err != nil && err != io.EOF {
-			panic(convertError{linker: jsonLinker{}, err: fmt.Errorf("decoding root: %v", err)})
+		if err = dec.Decode(&root); err != nil {
+			if err == io.EOF {
+				err = nil
+				break
+			} else {
+				panic(convertError{linker: jsonLinker{}, err: fmt.Errorf("decoding root: %v", err)})
+			}
 		}
 
 		r, rId := jsonToLinker(root, references)
@@ -112,10 +168,6 @@ func ProcessJSON(dec *json.Decoder) (roots []Linker, err error) {
 
 		processLinkerTree(r, root, references, deferred)
 		roots = append(roots, r)
-
-		if err == io.EOF {
-			break
-		}
 	}
 
 	return
