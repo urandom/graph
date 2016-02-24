@@ -107,7 +107,7 @@ type deferredLinker struct {
 // 				"Output": {
 // 					"Name": "Save",
 // 					"Options": {
-// 						"Path": {{ if gt (len .Args) 1 }} "{{ index .Args 1 }}" {{ else }} "/tmp/out.png" {{ end }}
+// 						"Path": "{{ if gt (len .Args) 1 }} {{ index .Args 1 }} {{ else }} /tmp/out.png {{ end }}"
 // 					}
 // 				}
 // 			}
